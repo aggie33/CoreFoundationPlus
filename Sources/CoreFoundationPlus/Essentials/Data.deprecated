@@ -1,0 +1,14 @@
+//
+//  File.swift
+//  
+//
+//  Created by Eric Bodnick on 5/12/23.
+//
+
+import Foundation
+
+public protocol DataProtocol {}
+
+public struct Data: _CFTypeInheritsImplementations {
+    var rawValue: CFData
+}

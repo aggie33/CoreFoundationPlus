@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: Port to Swift
+
 /// A type that can be encoded and decoded into a property list format.
 ///
 /// - Warning: Do not declare conformances to this protocol. Only the built-in types are supported.
@@ -23,7 +25,19 @@ import Foundation
 /// - Double
 /// - Float
 /// ```
-@_marker public protocol PropertyList { }
+public protocol PropertyList {
+    associatedtype _BridgeType = Self
+    
+    var _valueToBridge: Self._BridgeType { get }
+    static func _cast(from anyObject: AnyObject) -> Self?
+}
+
+extension PropertyList where _BridgeType == Self {
+    public var _valueToBridge: Self._BridgeType { self }
+    public static func _cast(from anyObject: AnyObject) -> Self? {
+        anyObject as? Self
+    }
+}
 
 extension String: PropertyList { }
 extension Array: PropertyList where Element: PropertyList { }
@@ -33,6 +47,27 @@ extension Int: PropertyList { }
 extension Double: PropertyList { }
 extension Float: PropertyList { }
 
+/// Use `Preferences` to store values in the application's preferences.
+///
+/// You can use it dynamically with a string key, like this:
+/// ```swift
+/// let numCookies: Int = Preferences["numCookies", as: Int.self] ?? 0
+/// ```
+///
+/// You can define a value of the type `Preferences.Key<T>` to access a non-optional value.
+/// ```swift
+/// let numCookiesKey = Preferences.Key(key: "numCookies", defaultValue: 0)
+/// let numCookies: Int = Preferences[numCookiesKey]
+/// ```
+///
+/// Or, for easy access, declare an extension to `Preferences.Keys`.
+/// ```swift
+/// extension Preferences.Keys {
+///     var numCookies: Preferences.Key<Int> { .init(key: "numCookies", defaultValue: 0) }
+/// }
+///
+/// let numCookies: Int = Preferences.numCookies
+/// ```
 @dynamicMemberLookup public struct Preferences {
     /// A namespace for Preferences keys.
     ///
@@ -121,11 +156,11 @@ extension Float: PropertyList { }
             guard let value = CFPreferencesCopyValue(dm as CFString, app.rawValue as CFString, user.rawValue as CFString, host.rawValue as CFString) else {
                 return nil
             }
-            return (value as? Value)
+            return (Value._cast(from: value))
         }
         nonmutating set {
             if let value = newValue {
-                CFPreferencesSetValue(dm as CFString, value as AnyObject, app.rawValue as CFString, user.rawValue as CFString, host.rawValue as CFString)
+                CFPreferencesSetValue(dm as CFString, value._valueToBridge as AnyObject, app.rawValue as CFString, user.rawValue as CFString, host.rawValue as CFString)
             } else {
                 CFPreferencesSetValue(dm as CFString, nil, app.rawValue as CFString, user.rawValue as CFString, host.rawValue as CFString)
             }
@@ -138,13 +173,59 @@ extension Float: PropertyList { }
             guard let value = CFPreferencesCopyValue(dm as CFString, app.rawValue as CFString, user.rawValue as CFString, host.rawValue as CFString) else {
                 return nil
             }
-            return (value as? Value)
+            return (Value._cast(from: value))
         }
         nonmutating set {
             if let value = newValue {
-                CFPreferencesSetValue(dm as CFString, value as AnyObject, app.rawValue as CFString, user.rawValue as CFString, host.rawValue as CFString)
+                CFPreferencesSetValue(dm as CFString, value._valueToBridge as AnyObject, app.rawValue as CFString, user.rawValue as CFString, host.rawValue as CFString)
             } else {
                 CFPreferencesSetValue(dm as CFString, nil, app.rawValue as CFString, user.rawValue as CFString, host.rawValue as CFString)
+            }
+        }
+    }
+    
+    /// Gets a value from the Preferences key-value store.
+    public static subscript<Value: PropertyList>(key: Key<Value>) -> Value {
+        get { standard[key.key] ?? key.defaultValue }
+        set { standard[key.key] = newValue }
+    }
+    
+    /// Gets a value from the Preferences key-value store.
+    public static subscript<Value: PropertyList>(dynamicMember dm: KeyPath<Keys, Key<Value>>) -> Value {
+        get { standard[Keys()[keyPath: dm]] }
+        set { standard[Keys()[keyPath: dm]] = newValue }
+    }
+    
+    /// Gets a value from the Preferences key-value store.
+    public static subscript<Value: PropertyList>(dynamicMember dm: String) -> Value? {
+        get {
+            guard let value = CFPreferencesCopyValue(dm as CFString, standard.app.rawValue as CFString, standard.user.rawValue as CFString, standard.host.rawValue as CFString) else {
+                return nil
+            }
+            return (Value._cast(from: value))
+        }
+        set {
+            if let value = newValue {
+                CFPreferencesSetValue(dm as CFString, value._valueToBridge as AnyObject, standard.app.rawValue as CFString, standard.user.rawValue as CFString, standard.host.rawValue as CFString)
+            } else {
+                CFPreferencesSetValue(dm as CFString, nil, standard.app.rawValue as CFString, standard.user.rawValue as CFString, standard.host.rawValue as CFString)
+            }
+        }
+    }
+    
+    /// Gets a value from the Preferences key-value store.
+    public static subscript<Value: PropertyList>(dm: String, as type: Value.Type = Value.self) -> Value? {
+        get {
+            guard let value = CFPreferencesCopyValue(dm as CFString, standard.app.rawValue as CFString, standard.user.rawValue as CFString, standard.host.rawValue as CFString) else {
+                return nil
+            }
+            return (Value._cast(from: value))
+        }
+        set {
+            if let value = newValue {
+                CFPreferencesSetValue(dm as CFString, value._valueToBridge as AnyObject, standard.app.rawValue as CFString, standard.user.rawValue as CFString, standard.host.rawValue as CFString)
+            } else {
+                CFPreferencesSetValue(dm as CFString, nil, standard.app.rawValue as CFString, standard.user.rawValue as CFString, standard.host.rawValue as CFString)
             }
         }
     }
@@ -175,7 +256,48 @@ extension Float: PropertyList { }
         self.app = app
     }
     
+    /// The default preferences value.
+    public static let standard = Preferences()
     
+    /// Synchronizes the Preferences storage with the storage on disk.
+    public func synchronize() {
+        CFPreferencesSynchronize(app.rawValue as CFString, user.rawValue as CFString, host.rawValue as CFString)
+    }
+    
+    /// Synchronizes the Preferences storage with the storage on disk.
+    public static func synchronize() {
+        standard.synchronize()
+    }
+    
+    /// Adds the suite named `suiteName` to `app`.
+    public func addSuite(_ suiteName: String) {
+        CFPreferencesAddSuitePreferencesToApp(app.rawValue as CFString, suiteName as CFString)
+    }
+    
+    /// Removes the suite named `suiteName` from `app`.
+    public func removeSuite(_ suiteName: String) {
+        CFPreferencesRemoveSuitePreferencesFromApp(app.rawValue as CFString, suiteName as CFString)
+    }
+    
+    /// Checks if the value has been imposed on the user.
+    public func isValueForced(_ key: String) -> Bool {
+        CFPreferencesAppValueIsForced(key as CFString, app.rawValue as CFString)
+    }
+    
+    /// Checks if the value has been imposed on the user.
+    public func isValueForced<Value>(_ key: Key<Value>) -> Bool {
+        isValueForced(key.key)
+    }
+    
+    /// Checks if the value has been imposed on the user.
+    public func isValueForced<Value>(_ key: KeyPath<Keys, Key<Value>>) -> Bool {
+        isValueForced(Keys()[keyPath: key])
+    }
+    
+    /// All valid preferences keys.
+    public var keys: [String] {
+        CFPreferencesCopyKeyList(app.rawValue as CFString, user.rawValue as CFString, host.rawValue as CFString) as? [String] ?? []
+    }
 }
 
 /// Stores a value in Preferences.
@@ -190,19 +312,19 @@ extension Float: PropertyList { }
     var key: Preferences.Key<Value>
     var store: Preferences
     
+    /// Creates a new Preference value.
+    /// - Parameters:
+    ///   - wrappedValue: The initial value.
+    ///   - key: The key to store the value with.
+    ///   - store: The Preferences store to use.
     public init(wrappedValue: Value, _ key: String, store: Preferences = Preferences()) {
         self.key = .init(key: key, defaultValue: wrappedValue)
         self.store = store
     }
     
+    /// The wrapped value.
     public var wrappedValue: Value {
         get { store[key] }
         nonmutating set { store[key] = newValue }
     }
 }
-
-// Date: Equivalent to AbsoluteTime
-// AbsoluteTime: Time interval since reference date
-// TimeInterval: A duration of time
-// Double: Just a double lol
-

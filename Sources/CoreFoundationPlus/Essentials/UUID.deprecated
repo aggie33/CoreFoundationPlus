@@ -1,0 +1,105 @@
+//
+//  File.swift
+//  
+//
+//  Created by Eric Bodnick on 5/7/23.
+//
+
+import Foundation
+
+// MARK: Port to Swift
+
+/// A protocol that encapsulates the UUID API.
+public protocol UUIDProtocol: LosslessStringConvertible, Equatable, Hashable, Codable {
+    /// Creates a new, randomly generated unique identifier.
+    init()
+    
+    /// Creates a new unique identifier from `bytes`.
+    init(bytes: UUID.Bytes)
+    
+    /// Gets the bytes of `self`.
+    var bytes: UUID.Bytes { get }
+}
+
+extension UUIDProtocol {
+    public init<T: UUIDProtocol>(_ uuid: T) {
+        self.init(bytes: uuid.bytes)
+    }
+}
+
+/// A universally unique identifier.
+public struct UUID: _CFTypeInheritsImplementations {
+    var rawValue: CFUUID
+    
+    /// Creates a new universally unique identifier.
+    public init() {
+        self.rawValue = CFUUIDCreate(nil)
+    }
+}
+
+extension UUID: LosslessStringConvertible {
+    /// The string representation of the UUID.
+    public var description: String {
+        return CFUUIDCreateString(nil, rawValue) as String
+    }
+    
+    /// Creates a UUID from its string representation.
+    public init?(_ description: String) {
+        if let uuid = CFUUIDCreateFromString(nil, description as CFString) {
+            self.rawValue = uuid
+        } else {
+            return nil
+        }
+    }
+}
+
+extension UUID {
+    /// The bytes that make up a UUID.
+    public typealias Bytes = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
+    
+    /// Creates a UUID with `bytes`.
+    public init(bytes: Bytes) {
+        self.rawValue = CFUUIDCreateFromUUIDBytes(nil, CFUUIDBytes(byte0: bytes.0, byte1: bytes.1, byte2: bytes.2, byte3: bytes.3, byte4: bytes.4, byte5: bytes.5, byte6: bytes.6, byte7: bytes.7, byte8: bytes.8, byte9: bytes.9, byte10: bytes.10, byte11: bytes.11, byte12: bytes.12, byte13: bytes.13, byte14: bytes.14, byte15: bytes.15))
+    }
+    
+    /// The bytes of `self`.
+    public var bytes: Bytes {
+        let b = CFUUIDGetUUIDBytes(rawValue)
+        
+        return (b.byte0, b.byte1, b.byte2, b.byte3, b.byte4, b.byte5, b.byte6, b.byte7, b.byte8, b.byte9, b.byte10, b.byte11, b.byte12, b.byte13, b.byte14, b.byte15)
+    }
+}
+
+extension UUID: Codable {
+    public func encode(to encoder: Encoder) throws {
+        try description.encode(to: encoder)
+    }
+    
+    public enum DecodingError: Error {
+        case invalidUUID
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let string = try decoder.singleValueContainer().decode(String.self)
+        
+        guard let uuid = UUID(string) else {
+            throw DecodingError.invalidUUID
+        }
+        
+        self = uuid
+    }
+}
+
+extension UUID: UUIDProtocol {
+    public init(_ other: some UUIDProtocol) {
+        self.init(bytes: other.bytes)
+    }
+}
+
+extension UUID: PropertyList {
+    public var _valueToBridge: String { self.description }
+    
+    public static func _cast(from anyObject: AnyObject) -> UUID? {
+        (anyObject as? String).map { UUID($0) } ?? nil
+    }
+}

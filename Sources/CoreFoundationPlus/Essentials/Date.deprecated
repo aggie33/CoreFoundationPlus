@@ -1,0 +1,95 @@
+//
+//  File.swift
+//  
+//
+//  Created by Eric Bodnick on 5/10/23.
+//
+
+import Foundation
+
+public protocol DateProtocol: Comparable, Equatable, Hashable, Codable, CustomStringConvertible {
+    associatedtype AbsoluteTimeType: AbsoluteTimeProtocol = AbsoluteTime
+    associatedtype TimeIntervalType: TimeIntervalProtocol = TimeInterval where AbsoluteTimeType.TimeIntervalType == TimeIntervalType
+    init(_ absoluteTime: AbsoluteTimeType)
+    
+    var absoluteTime: AbsoluteTimeType { get set }
+    func timeInterval(since date: Self) -> TimeIntervalType
+}
+
+extension DateProtocol {
+    public static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.absoluteTime.timeIntervalSinceReferenceDate.seconds < rhs.absoluteTime.timeIntervalSinceReferenceDate.seconds
+    }
+    
+    public static func > (lhs: Self, rhs: Self) -> Bool {
+        lhs.absoluteTime.timeIntervalSinceReferenceDate.seconds > rhs.absoluteTime.timeIntervalSinceReferenceDate.seconds
+    }
+    
+    public static func <= (lhs: Self, rhs: Self) -> Bool {
+        lhs.absoluteTime.timeIntervalSinceReferenceDate.seconds <= rhs.absoluteTime.timeIntervalSinceReferenceDate.seconds
+    }
+    
+    public static func >= (lhs: Self, rhs: Self) -> Bool {
+        lhs.absoluteTime.timeIntervalSinceReferenceDate.seconds >= rhs.absoluteTime.timeIntervalSinceReferenceDate.seconds
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.absoluteTime == rhs.absoluteTime
+    }
+    
+    public static func + (lhs: Self, rhs: TimeIntervalType) -> Self {
+        Self(lhs.absoluteTime + rhs)
+    }
+    
+    public static func - (lhs: Self, rhs: TimeIntervalType) -> Self {
+        Self(lhs.absoluteTime - rhs)
+    }
+    
+    public static func += (lhs: inout Self, rhs: TimeIntervalType) {
+        lhs.absoluteTime += rhs
+    }
+    
+    public static func -= (lhs: inout Self, rhs: TimeIntervalType) {
+        lhs.absoluteTime -= rhs
+    }
+    
+    public func timeInterval(since date: Self) -> TimeIntervalType {
+        self.absoluteTime.timeIntervalSinceReferenceDate - date.absoluteTime.timeIntervalSinceReferenceDate
+    }
+    
+    public init(timeIntervalSinceReferenceDate: TimeIntervalType) {
+        self.init(AbsoluteTimeType(timeIntervalSinceReferenceDate: timeIntervalSinceReferenceDate))
+    }
+    
+    public static var reference: Self {
+        self.init(.reference)
+    }
+    
+    public static var now: Self {
+        self.init(.now)
+    }
+    
+    public var description: String {
+        "\(absoluteTime.timeIntervalSinceReferenceDate.seconds) seconds since reference date"
+    }
+}
+
+public struct Date: DateProtocol {
+    public var absoluteTime: AbsoluteTime
+    
+    public init(_ absoluteTime: AbsoluteTime) {
+        self.absoluteTime = absoluteTime
+    }
+}
+
+extension Date: PropertyList {
+    public static func _cast(from anyObject: AnyObject) -> Date? {
+        (CFTypeCast(anyObject, typeCode: CFDateGetTypeID()) as CFDate?).map {
+            Date(AbsoluteTime(timeIntervalSinceReferenceDate: .seconds(CFDateGetAbsoluteTime($0))))
+        }
+    }
+    
+    public var _valueToBridge: CFDate {
+        CFDateCreate(nil, absoluteTime.timeIntervalSinceReferenceDate.seconds)
+    }
+}

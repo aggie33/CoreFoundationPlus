@@ -8,11 +8,11 @@
 import CoreFoundation
 
 extension CFRange {
-    init(_ range: Range<Int>) {
+    @inlinable init(_ range: Range<Int>) {
         self.init(location: range.lowerBound, length: range.upperBound - range.lowerBound)
     }
     
-    init(_ range: ClosedRange<Int>) {
+    @inlinable init(_ range: ClosedRange<Int>) {
         self.init(location: range.lowerBound, length: range.upperBound + 1 - range.lowerBound)
     }
 }
@@ -28,7 +28,7 @@ public enum ComparisonResult: Index, Hashable, Codable {
     /// The value is greater than the other value.
     case greaterThan = 1
     
-    init(_ result: CFComparisonResult) {
+    @inlinable init(_ result: CFComparisonResult) {
         switch result {
         case .compareEqualTo:
             self = .equalTo
@@ -41,7 +41,7 @@ public enum ComparisonResult: Index, Hashable, Codable {
         }
     }
     
-    var rawValue: CFComparisonResult {
+    @inlinable var rawValue: CFComparisonResult {
         switch self {
         case .lessThan:
             return .compareLessThan
@@ -55,7 +55,7 @@ public enum ComparisonResult: Index, Hashable, Codable {
 
 extension Comparable {
     /// Compares `self` to `other`.
-    public func compare(to other: Self) -> ComparisonResult {
+    @inlinable public func compare(to other: Self) -> ComparisonResult {
         if self < other {
             return .lessThan
         } else if self == other {
