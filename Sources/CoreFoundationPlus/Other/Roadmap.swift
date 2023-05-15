@@ -34,16 +34,18 @@ import Foundation
  Binary Heap
     BinaryHeap<Element>
     BinaryHeapProtocol<Element>
-
+ Bit Vector
+    BitVector
+ String Tokenizer
+    StringTokenizer
+ 
  INCOMPLETE:
- BitVector
  PlugIn
  PlugInInstance
  PropertyList
  RunLoop.Observer
  RunLoop.Source
  Socket
- String.Tokenizer
  */
 
 internal protocol _CFTypeInheritsImplementations: Equatable, Hashable, CustomStringConvertible {

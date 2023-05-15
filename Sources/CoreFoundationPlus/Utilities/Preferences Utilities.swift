@@ -46,6 +46,8 @@ extension Bool: PropertyList { }
 extension Int: PropertyList { }
 extension Double: PropertyList { }
 extension Float: PropertyList { }
+extension Date: PropertyList { }
+extension Data: PropertyList { }
 
 /// Use `Preferences` to store values in the application's preferences.
 ///
@@ -328,3 +330,4 @@ extension Float: PropertyList { }
         nonmutating set { store[key] = newValue }
     }
 }
+
