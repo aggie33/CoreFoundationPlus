@@ -81,7 +81,7 @@ extension Tree: Decodable where Element: Decodable { }
 extension Tree: CustomStringConvertible {
     private func description(indentationLevel: Int) -> String {
         """
-        \(String(repeating: "\t", count: indentationLevel))• \(value)
+        \(String(repeating: "\t", count: indentationLevel))- \(value)
         \(children.map { $0.description(indentationLevel: indentationLevel + 1) }.joined())
         """
     }

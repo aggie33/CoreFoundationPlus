@@ -35,6 +35,8 @@ final class TreeTests: XCTestCase {
             }
         }
         
+        print(tree)
+        
         XCTAssertEqual(tree.value, 1)
         XCTAssertEqual(tree.children.count, 2)
         XCTAssertEqual(tree.children[0].value, 2)
