@@ -45,7 +45,6 @@ import Foundation
  PropertyList
  RunLoop.Observer
  RunLoop.Source
- Socket
  */
 
 internal protocol _CFTypeInheritsImplementations: Equatable, Hashable, CustomStringConvertible {
